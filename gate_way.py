@@ -33,7 +33,7 @@ def connected(client, usedata, flags, rc):
     else:
         print("Connection is failed")
 
-async def get_current_latitude():
+async def get_current_location():
     global longitude, latitude
     locator = wdg.Geolocator()
     pos = await locator.get_geoposition_async()
@@ -55,7 +55,7 @@ light_intesity = 10
 counter = 0
 while True:
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(get_current_latitude())
+    loop.run_until_complete(get_current_location())
     collect_data = {'temperature': temp, 'humidity': humi, 'light':light_intesity, 'longitude': longitude, 'latitude': latitude}
     print(longitude, latitude)
     temp += 1
