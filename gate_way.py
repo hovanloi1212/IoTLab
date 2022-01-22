@@ -53,8 +53,7 @@ temp = 30
 humi = 50
 light_intesity = 10
 counter = 0
-while True:
-    loop = asyncio.get_event_loop()
+loop = asyncio.get_event_loop()
 while True:
     loop.run_until_complete(get_current_location())
     collect_data = {'temperature': temp, 'humidity': humi, 'light':light_intesity, 'longitude': longitude, 'latitude': latitude}
