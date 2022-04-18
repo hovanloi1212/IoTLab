@@ -1,30 +1,75 @@
-print("Xin chao ThingBoard")
+print("IoT Gateway")
+from gc import collect
 import paho.mqtt.client as mqttclient
 import time
 import json
-import asyncio
-import winrt.windows.devices.geolocation as wdg
+import serial.tools.list_ports
 
 BROKER_ADDRESS = "demo.thingsboard.io"
 PORT = 1883
+mess = ""
+
+#TODO: Add your token and your comport
+#Please check the comport in the device manager
 THINGS_BOARD_ACCESS_TOKEN = "88lbBIvmjolmHsh0CfMR"
+bbc_port = "COM5"
+if len(bbc_port) > 0:
+    ser = serial.Serial(port=bbc_port, baudrate=115200)
+
+def processData(data):
+    data = data.replace("!", "")
+    data = data.replace("#", "")
+    splitData = data.split(":")
+    print(splitData)
+    #TODO: Add your source code to publish data to the server
+    sensordata(splitData[1],splitData[2])
+
+def sensordata(telemetry,data):
+    global light,temp
+    if telemetry == "TEMP" :
+        temp = data
+    if telemetry == "LIGHT":
+        light = data
+def readSerial():
+    bytesToRead = ser.inWaiting()
+    if (bytesToRead > 0):
+        global mess
+        mess = mess + ser.read(bytesToRead).decode("UTF-8")
+        while ("#" in mess) and ("!" in mess):
+            start = mess.find("!")
+            end = mess.find("#")
+            processData(mess[start:end + 1])
+            if (end == len(mess)):
+                mess = ""
+            else:
+                mess = mess[end+1:]
 
 
 def subscribed(client, userdata, mid, granted_qos):
     print("Subscribed...")
 
-
 def recv_message(client, userdata, message):
     print("Received: ", message.payload.decode("utf-8"))
     temp_data = {'value': True}
+    cmd = 1
+    #TODO: Update the cmd to control 2 devices
     try:
         jsonobj = json.loads(message.payload)
-        if jsonobj['method'] == "setValue":
+        if jsonobj['method'] == "setLED":
             temp_data['value'] = jsonobj['params']
-            client.publish('v1/devices/me/attributes', json.dumps(temp_data), 1)
+            if temp_data['value'] == True: cmd = 1
+            else: cmd = 0
+            client.publish('v1/devices/me/BUTTON_LED', json.dumps(temp_data), 1)
+        if jsonobj['method'] == "setFAN":
+            temp_data['valueFAN'] = jsonobj['params']
+            client.publish('v1/devices/me/BUTTON_FAN', json.dumps(temp_data), 1)
+            if temp_data['valueFAN'] == True: cmd = 3
+            else: cmd = 2
     except:
         pass
 
+    if len(bbc_port) > 0:
+        ser.write((str(cmd) + "#").encode())
 
 def connected(client, usedata, flags, rc):
     if rc == 0:
@@ -33,12 +78,6 @@ def connected(client, usedata, flags, rc):
     else:
         print("Connection is failed")
 
-async def get_current_location():
-    global longitude, latitude
-    locator = wdg.Geolocator()
-    pos = await locator.get_geoposition_async()
-    longitude = pos.coordinate.longitude
-    latitude = pos.coordinate.latitude
 
 client = mqttclient.Client("Gateway_Thingsboard")
 client.username_pw_set(THINGS_BOARD_ACCESS_TOKEN)
@@ -46,20 +85,14 @@ client.username_pw_set(THINGS_BOARD_ACCESS_TOKEN)
 client.on_connect = connected
 client.connect(BROKER_ADDRESS, 1883)
 client.loop_start()
-
 client.on_subscribe = subscribed
 client.on_message = recv_message
-temp = 30
-humi = 50
-light_intesity = 10
-counter = 0
-loop = asyncio.get_event_loop()
+collect_data = {}
+temp = 0
+light = 0
 while True:
-    loop.run_until_complete(get_current_location())
-    collect_data = {'temperature': temp, 'humidity': humi, 'light':light_intesity, 'longitude': longitude, 'latitude': latitude}
-    print(longitude, latitude)
-    temp += 1
-    humi += 1
-    light_intesity += 1
-    client.publish('v1/devices/me/telemetry', json.dumps(collect_data), 1)
-    time.sleep(5)    
+    if len(bbc_port) >  0:
+        readSerial()
+        collect_data  = {'temperature': temp, 'light':light}
+        client.publish('v1/devices/me/telemetry', json.dumps(collect_data), 1)
+    time.sleep(1)

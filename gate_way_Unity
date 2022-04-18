@@ -1,0 +1,76 @@
+print("Xin chao ThingBoard")
+import paho.mqtt.client as mqttclient
+import time
+import json
+import asyncio
+import winrt.windows.devices.geolocation as wdg
+
+BROKER_ADDRESS = "mqttserver.tk"
+PORT = 1883
+Username = "bkiot"
+pwd = "12345678"
+
+
+def subscribed(client, userdata, mid, granted_qos):
+    print("Subscribed...")
+    
+
+def recv_message(client, userdata, message):
+    print("Received: ", message.payload.decode("utf-8"))
+    client.publish("v1/devices/me/rpc/response/+")
+    temp_data = {'value': True}
+    try:
+        jsonobj = json.loads(message.payload)
+        if jsonobj['method'] == "setValue":
+            temp_data['value'] = jsonobj['params']
+            client.publish('v1/devices/me/attributes', json.dumps(temp_data), 1)
+    except:
+        pass
+
+
+def connected(client, usedata, flags, rc):
+    if rc == 0:
+        print("Thingsboard connected successfully!!")
+        client.subscribe("/bkiot/1811068/status/")
+    else:
+        print("Connection is failed")
+
+async def get_current_location():
+    global longitude, latitude
+    locator = wdg.Geolocator()
+    pos = await locator.get_geoposition_async()
+    longitude = pos.coordinate.longitude
+    latitude = pos.coordinate.latitude
+
+client = mqttclient.Client("Gateway_Thingsboard")
+client.username_pw_set(username=Username,password=pwd)
+
+client.on_connect = connected
+client.connect(BROKER_ADDRESS, 1883)
+client.loop_start()
+client.on_subscribe = subscribed
+client.on_message = recv_message
+temp = 35
+humi = 60
+light_intesity = 10
+longitude = 106.66061516906501
+latitude = 10.773364009098115
+counter = 0
+while True:
+    #loop.run_until_complete(get_current_location())
+    collect_data = {"project_id":"1811068","project_name":"hehe","station_id":"Station 1","station_name":"meomeo",
+                    "longitude":"106.66061516906501","latitude":"10.773364009098115",
+                    "volt_battery":"100%","volt_solar":"100%",
+                    "data_ss":[
+                        {"ss_name":"temperature","ss_unit":"","ss_value":temp},
+                        {"ss_name":"humidity","ss_unit":"","ss_value":humi}
+                    ],
+                    "device_status":"1"
+                    }
+
+    #print(longitude, latitude)
+    temp += 1
+    humi += 1
+    light_intesity += 1
+    client.publish('/bkiot/1811068/status', json.dumps(collect_data), 1)
+    time.sleep(5)    
