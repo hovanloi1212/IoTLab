@@ -1,41 +1,56 @@
 serial.onDataReceived(serial.delimiters(Delimiters.Hash), function () {
     cmd = serial.readUntil(serial.delimiters(Delimiters.Hash))
-    basic.showString(cmd)
     if (cmd == "0") {
-        for (let i = 0; i < 5; i++) {
-            led.plot(1, i)
-            led.plot(3, i)
-        }
-        led.plot(2, 0)
-        led.plot(2, 4)
+        basic.showLeds(`
+            . # # # .
+            . # . # .
+            . # . # .
+            . # . # .
+            . # # # .
+            `)
     } else if (cmd == "1") {
-        for (let i = 0; i < 5; i++) {
-            led.plot(2, i)
-        }
-        led.plot(1, 1)
+        basic.showLeds(`
+            . . # . .
+            . # # . .
+            . . # . .
+            . . # . .
+            . . # . .
+            `)
     } else if (cmd == "2") {
-        for (let i = 1; i < 4; i++) {
-            led.plot(i, 0)
-            led.plot(i, 2)
-            led.plot(i, 4)
-        }
-        led.plot(1, 3)
-        led.plot(3, 1)
+        basic.showLeds(`
+            . # # # .
+            . . . # .
+            . # # # .
+            . # . . .
+            . # # # .
+            `)
     } else if (cmd == "3") {
-        for (let i = 1; i < 4; i++) {
-            led.plot(i, 0)
-            led.plot(i, 2)
-            led.plot(i, 4)
-        }
-        led.plot(3, 3)
-        led.plot(3, 1)
+        basic.showLeds(`
+            . # # # .
+            . . . # .
+            . # # # .
+            . . . # .
+            . # # # .
+            `)
     }
 })
 let cmd = ""
+let count = 0
 led.enable(true)
 basic.forever(function () {
-    serial.writeString("!1:TEMP:" + input.temperature() + "#")
-    basic.pause(5000)
-    serial.writeString("!1:LIGHT:" + input.lightLevel() + "#")
-    basic.pause(5000)
+    
+    if (count == 0) {
+        serial.writeString("!1:TEMP:" + input.temperature() + "#")
+    }
+    
+    if (count == 5) {
+        serial.writeString("!1:LIGHT:" + input.lightLevel() + "#")
+    }
+    
+    count++
+
+    if (count == 10) {
+        count = 0
+    }
+    basic.pause(1000)
 })
