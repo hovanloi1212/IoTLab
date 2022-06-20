@@ -34,23 +34,18 @@ serial.onDataReceived(serial.delimiters(Delimiters.Hash), function () {
             `)
     }
 })
+let flag = 0
 let cmd = ""
-let count = 0
 led.enable(true)
+let time = input.runningTime()
 basic.forever(function () {
-    
-    if (count == 0) {
+    if (input.runningTime() - time >= 5000 && flag == 0) {
         serial.writeString("!1:TEMP:" + input.temperature() + "#")
+        flag = 1
     }
-    
-    if (count == 5) {
+    if (input.runningTime() - time >= 10000) {
         serial.writeString("!1:LIGHT:" + input.lightLevel() + "#")
+        time = input.runningTime()
+        flag = 0
     }
-    
-    count++
-
-    if (count == 10) {
-        count = 0
-    }
-    basic.pause(1000)
 })

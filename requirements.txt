@@ -1,3 +1,8 @@
 paho-mqtt
 winrt
 pyserial
+keras
+Pillow
+numpy
+opencv-python
+tensorflow
